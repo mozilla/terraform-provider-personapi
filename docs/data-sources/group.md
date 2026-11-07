@@ -38,7 +38,7 @@ Read-Only:
 - `github_email` (String) GitHub primary email address
 - `github_id` (String) GitHub ID
 - `github_node_id` (String) GitHub node ID
-- `github_username` (String) GitHub username
+- `github_username` (String) GitHub username from the Person API. **Warning:** This value may be out of date. Provider consumers must verify that the username is current before using it.
 - `id` (String) People user identifier
 - `is_director` (Boolean) Whether the person is a director
 - `is_manager` (Boolean) Whether the person is a manager
