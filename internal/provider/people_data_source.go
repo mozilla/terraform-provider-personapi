@@ -113,7 +113,7 @@ func PeopleAttributes(readOnly bool) map[string]schema.Attribute {
 			Computed:            true,
 		},
 		"github_username": schema.StringAttribute{
-			MarkdownDescription: "GitHub username",
+			MarkdownDescription: "GitHub username from the Person API. **Warning:** This value may be out of date. Provider consumers must verify that the username is current before using it.",
 			Computed:            true,
 		},
 		"id": queryField("People user identifier"),
@@ -252,8 +252,6 @@ func (d *PeopleDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 		return
 	}
 
-	model.GitHub_Username = types.StringValue(resolveGithubUsername(ctx, d.client, person))
-
 	// Preserve the email the caller queried with; the rest comes from the API.
 	model.Email = data.Email
 	data = model
@@ -272,8 +270,7 @@ func (d *PeopleDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 // personToModel maps a person_api.Person into a PeopleDataSourceModel using only
 // locally-available data. It is shared by the personapi_people and personapi_group data
-// sources. GitHub_Username is set to the value CIS provides; callers wanting the
-// freshest value should overwrite it with resolveGithubUsername (a network call).
+// sources. GitHub_Username is set to the value provided by the Person API.
 // The Email field is left unset, as it is not consistently present on profiles
 // returned in bulk; the caller can populate it from the source query when known.
 func personToModel(ctx context.Context, person *person_api.Person) (PeopleDataSourceModel, diag.Diagnostics) {
@@ -333,18 +330,4 @@ func personToModel(ctx context.Context, person *person_api.Person) (PeopleDataSo
 	data.Username = types.StringValue(person.PrimaryUsername.Value)
 
 	return data, diags
-}
-
-// resolveGithubUsername returns the freshest GitHub username for the person,
-// performing the dino-park whoami lookup when a v3 id is available. On any
-// lookup failure it falls back to the CIS-provided value. This makes a network
-// call and is safe to invoke concurrently for different people.
-func resolveGithubUsername(ctx context.Context, client *person_api.Client, person *person_api.Person) string {
-	githubUsername := person.Usernames.Values.GitHubUsername
-	if person.Identities.GithubIDV3 != nil && person.Identities.GithubIDV3.Value != "" {
-		if username, err := client.GetGithubUsernameByNodeID(ctx, person.Identities.GithubIDV3.Value); err == nil {
-			githubUsername = username
-		}
-	}
-	return githubUsername
 }
